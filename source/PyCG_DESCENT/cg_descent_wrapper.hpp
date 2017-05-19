@@ -96,7 +96,7 @@ public:
 
     virtual ~CGDescent() {}
 
-    virtual bool test_convergence(double energy, pele::Array<double> x, pele::Array<double> g) { return false; }
+    virtual bool test_convergence(double energy, pele::Array<double> const & x) { return false; }
 
     //run
     inline void run()
@@ -373,8 +373,7 @@ inline int pycgd_test_callback(double f, double* x, double* g, INT n, void* user
 {
     pycgd::CGDescent * cgd = static_cast<pycgd::CGDescent*>(user_data);
     pele::Array<double> xarray(x, (size_t) n);
-    pele::Array<double> garray(g, (size_t) n);
-    return (int) cgd->test_convergence(f, xarray, garray);
+    return (int) cgd->test_convergence(f, xarray);
 }
 
 } // namespace
