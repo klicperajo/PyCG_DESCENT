@@ -38,12 +38,12 @@ size_t glob_nfev;
 inline double pycgd_value(double* x, INT n)
 {
     ++glob_nfev;
-    if (std::any_of(x, x + n,
+    pele::Array<double> xarray(x, (size_t) n);
+    if (std::any_of(xarray.begin(), xarray.end(),
                     [](double elem) { return !std::isfinite(elem); }
                     )) {
         return NAN;
     } else {
-        pele::Array<double> xarray(x, (size_t) n);
         return glob_pot->get_energy(xarray);
     }
 }
@@ -51,13 +51,13 @@ inline double pycgd_value(double* x, INT n)
 inline void pycgd_gradient(double* g, double* x, INT n)
 {
     ++glob_nfev;
-    if (std::any_of(x, x + n,
+    pele::Array<double> xarray(x, (size_t) n);
+    pele::Array<double> garray(g, (size_t) n);
+    if (std::any_of(xarray.begin(), xarray.end(),
                     [](double elem) { return !std::isfinite(elem); }
                     )) {
-        std::fill(g, g + n, NAN);
+        garray.assign(NAN);
     } else {
-        pele::Array<double> xarray(x, (size_t) n);
-        pele::Array<double> garray(g, (size_t) n);
         glob_pot->get_energy_gradient(xarray, garray);
     }
 }
@@ -65,14 +65,14 @@ inline void pycgd_gradient(double* g, double* x, INT n)
 inline double pycgd_value_gradient(double* g, double* x, INT n)
 {
     ++glob_nfev;
-    if (std::any_of(x, x + n,
+    pele::Array<double> xarray(x, (size_t) n);
+    pele::Array<double> garray(g, (size_t) n);
+    if (std::any_of(xarray.begin(), xarray.end(),
                     [](double elem) { return !std::isfinite(elem); }
                     )) {
-        std::fill(g, g + n, NAN);
+        garray.assign(NAN);
         return NAN;
     } else {
-        pele::Array<double> xarray(x, (size_t) n);
-        pele::Array<double> garray(g, (size_t) n);
         return glob_pot->get_energy_gradient(xarray, garray);
     }
 }
@@ -317,7 +317,7 @@ public:
         if (std::any_of(m_x.begin(), m_x.end(),
                         [](double elem) { return !std::isfinite(elem); }
                         )) {
-            std::fill(g.begin(), g.end(), NAN);
+            g.assign(NAN);
         } else {
             m_pot->get_energy_gradient(m_x, g);
         }
