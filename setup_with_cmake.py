@@ -13,8 +13,8 @@ from numpy.distutils.command.build_ext import build_ext as old_build_ext
 
 import pele
 
-# Numpy header files 
-numpy_lib = os.path.split(np.__file__)[0] 
+# Numpy header files
+numpy_lib = os.path.split(np.__file__)[0]
 numpy_include = os.path.join(numpy_lib, 'core/include')
 
 # find pele path
@@ -34,7 +34,7 @@ parser.add_argument("-j", type=int, default=4)
 parser.add_argument("-c", "--compiler", type=str, default=None)
 jargs, remaining_args = parser.parse_known_args(sys.argv)
 
-# record c compiler choice. use unix (gcc) by default  
+# record c compiler choice. use unix (gcc) by default
 # Add it back into remaining_args so distutils can see it also
 idcompiler = None
 if not jargs.compiler or jargs.compiler in ("unix", "gnu", "gcc"):
@@ -54,11 +54,15 @@ else:
 
 #extra compiler args
 cmake_compiler_extra_args=["-std=c++0x","-Wall", "-Wextra", "-pedantic", "-O3"]
-    
+if idcompiler.lower() == 'unix':
+    cmake_compiler_extra_args += ['-march=native', '-flto', '-fopenmp']
+else:
+    cmake_compiler_extra_args += ['-xavx', '-ipo', '-qopenmp']
+
 
 #
 # Make the git revision visible.  Most of this is copied from scipy
-# 
+#
 # Return the git revision as a string
 def git_version():
     def _minimal_ext_cmd(cmd):
@@ -117,9 +121,9 @@ class ModuleList:
         modname, ext = os.path.splitext(modname)
         self.module_list.append(Extension(modname, [filename], **self.kwargs))
 
-setup(name='PyCG_DESCENT', 
+setup(name='PyCG_DESCENT',
       version='0.1',
-      author='Stefano Martiniani and Jacob Stevenson', 
+      author='Stefano Martiniani and Jacob Stevenson',
       description="PyCG_DESCENT is a Python wrapper for the CG_DESCENT algorithm by William W. Hager and Hongchao Zang",
       url='https://github.com/smcantab/PyCG_DESCENT',
       packages=["PyCG_DESCENT",
@@ -161,13 +165,13 @@ def get_ldflags(opt="--ldflags"):
             libs.extend(getvar('LINKFORSHARED').split())
     return ' '.join(libs)
 
-# create file CMakeLists.txt from CMakeLists.txt.in 
+# create file CMakeLists.txt from CMakeLists.txt.in
 with open("CMakeLists.txt.in", "r") as fin:
     cmake_txt = fin.read()
-# We first tell cmake where the include directories are 
+# We first tell cmake where the include directories are
 cmake_txt = cmake_txt.replace("__PELE_INCLUDE__", pelepath + "/source")
 # note: the code to find python_includes was taken from the python-config executable
-python_includes = [sysconfig.get_python_inc(), 
+python_includes = [sysconfig.get_python_inc(),
                    sysconfig.get_python_inc(plat_specific=True)]
 cmake_txt = cmake_txt.replace("__PYTHON_INCLUDE__", " ".join(python_includes))
 if isinstance(numpy_include, basestring):
@@ -175,7 +179,7 @@ if isinstance(numpy_include, basestring):
 cmake_txt = cmake_txt.replace("__NUMPY_INCLUDE__", " ".join(numpy_include))
 cmake_txt = cmake_txt.replace("__PYTHON_LDFLAGS__", get_ldflags())
 cmake_txt = cmake_txt.replace("__COMPILER_EXTRA_ARGS__", '\"{}\"'.format(" ".join(cmake_compiler_extra_args)))
-# Now we tell cmake which librarires to build 
+# Now we tell cmake which librarires to build
 with open("CMakeLists.txt", "w") as fout:
     fout.write(cmake_txt)
     fout.write("\n")
@@ -207,7 +211,7 @@ def run_cmake(compiler_id="unix"):
     print "\nrunning cmake in directory", cmake_build_dir
     cwd = os.path.abspath(os.path.dirname(__file__))
     env, cmake_compiler_args = set_compiler_env(compiler_id)
-    
+
     p = subprocess.call(["cmake"] + cmake_compiler_args + [cwd], cwd=cmake_build_dir, env=env)
     if p != 0:
         raise Exception("running cmake failed")
@@ -221,17 +225,17 @@ def run_cmake(compiler_id="unix"):
 
 
 run_cmake(compiler_id=idcompiler)
-    
+
 
 # Now that the cython libraries are built, we have to make sure they are copied to
-# the correct location.  This means in the source tree if build in-place, or 
+# the correct location.  This means in the source tree if build in-place, or
 # somewhere in the build/ directory otherwise.  The standard distutils
 # knows how to do this best.  We will overload the build_ext command class
 # to simply copy the pre-compiled libraries into the right place
 class build_ext_precompiled(old_build_ext):
     def build_extension(self, ext):
         """overload the function that build the extension
-        
+
         This does nothing but copy the precompiled library stored in extension.sources[0]
         to the correct destination based on extension.name and whether it is an in-place build
         or not.
@@ -259,6 +263,3 @@ for fname in cxx_files:
 
 setup(cmdclass=dict(build_ext=build_ext_precompiled),
       ext_modules=cxx_modules)
-
-
-
